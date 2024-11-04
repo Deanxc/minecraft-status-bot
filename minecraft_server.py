@@ -17,10 +17,13 @@ intents.guilds = True    # Enable guild-related events
 # Create a Discord client with the specified intents
 client = discord.Client(intents=intents)
 
-async def send_message(message):
+# Dictionary to store each player's login message
+logged_in_players = {}
+
+async def send_message(content):
     channel = client.get_channel(CHANNEL_ID)
     if channel:
-        await channel.send(message)
+        return await channel.send(content)
 
 async def listen_to_server():
     # Start the Minecraft server process, adjust params as needed
@@ -39,17 +42,19 @@ async def listen_to_server():
                 player_name = login_match.group(1)
                 role = discord.utils.get(client.guilds[0].roles, name=ROLE_NAME)  # Get the role
                 if role:
-                    message = f"{player_name} has entered the Grove! <@&{role.id}>"
-                    await send_message(message)  # Send the message to Discord
+                    message_content = f"{player_name} has entered the Grove! <@&{role.id}>"
+                    message = await send_message(message_content)  # Send the message to Discord
+                    logged_in_players[player_name] = message  # Store the message for future deletion
 
             # Check for player logout
             logout_match = re.search(r'\[.*INFO\]: (.*) left the game', output)
             if logout_match:
                 player_name = logout_match.group(1)
                 role = discord.utils.get(client.guilds[0].roles, name=ROLE_NAME)  # Get the role
-                if role:
-                    message = f"{player_name} has left the Grove. <@&{role.id}>"
-                    await send_message(message)  # Send the message to Discord
+                if role and player_name in logged_in_players:
+                    # Delete the login message when the player logs out
+                    await logged_in_players[player_name].delete()  # Delete the stored message
+                    del logged_in_players[player_name]  # Remove the player from the dictionary
 
 # Run the bot
 @client.event
