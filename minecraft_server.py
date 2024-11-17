@@ -113,11 +113,18 @@ async def listen_to_server():
 
                 await send_message(custom_message, gif_url, channel_id=FEED_CHANNEL_ID)
 
-# Run the bot
+async def start_bot():
+    if client.is_ready():  # Check if bot is already connected
+        await client.close()  # Close the existing connection if open
+        print("Bot connection closed.")
+
+    # Now, start the bot connection again
+    await client.start(TOKEN)
+
 @client.event
 async def on_ready():
     print(f'Logged in as {client.user}')
     await listen_to_server()
 
-# Start the bot with the specified token
-client.run(TOKEN)
+# Run the bot
+asyncio.run(start_bot())
