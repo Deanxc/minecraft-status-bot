@@ -99,13 +99,18 @@ async def listen_to_server():
                 await player_logout(logout_match)
 
             # Player death message
-            death_match = re.search(r'\[.*INFO\]: (.*) (was slain by .*|fell from a high place|burned to death|lava|drowned|blew up|hit the ground too hard|was shot by .*|was pricked to death|walked into a cactus|suffocated)', output)
+            death_match = re.search(
+                r'\[.*INFO\]: (.*?)(?: (was slain by .*|fell|burned to death|lava|drowned|blew up|hit the ground too hard|was shot by .*|was pricked to death|walked into a cactus|suffocated|was stung by a bee|starved to death|was struck by lightning|was killed by a magic arrow|was killed by a firework rocket|was killed by a falling block|was killed by an arrow|was shot by a player|was impaled by a trident|was thrown into the void|was struck by an iron golem|was killed by a ghast|was killed by a zombie|was killed by a skeleton|was killed by a spider|was killed by a cave spider|was killed by a wolf|was killed by a llama|was killed by a fox|was killed by a panda|was killed by a player with a sword|was killed by a player with a bow|was killed by a player with a crossbow|was killed by a player with an axe|was killed by a player with a trident))',
+                output)
             if death_match:
+                print('death_match: ', death_match)
                 player_name = death_match.group(1)
                 death_type = death_match.group(2)
+                print('player_name: ', player_name)
+                print('death_type: ', death_type)
 
                 # Get the custom death message and select a GIF if defined
-                custom_message = death_messages.get(death_type, f"{player_name} met an unfortunate end.")
+                custom_message = f"{player_name} " + death_messages.get(death_type, "met an unfortunate end.")
                 gif_url = None
 
                 if death_type in gifs:
