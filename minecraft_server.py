@@ -58,9 +58,30 @@ async def send_message(content, gif_url=None, channel_id=None):
             await channel.send(gif_url)
         return main_message  # Return the main message for tracking
 
+async def player_login(login_match):
+    player_name = login_match.group(1)
+    role = discord.utils.get(client.guilds[0].roles, name=ROLE_NAME)
+    if role:
+        message_content = f"{player_name} has entered the Grove! <@&{role.id}>"
+        # Store the message object returned so it can be deleted on logout
+        message = await send_message(message_content, channel_id=LOGIN_CHANNEL_ID)
+        logged_in_players[player_name] = message
+
+async def player_logout(logout_match):
+    player_name = logout_match.group(1)
+    # Retrieve and delete the login message
+    if player_name in logged_in_players:
+        await logged_in_players[player_name].delete()
+        del logged_in_players[player_name]
+
 async def listen_to_server():
-    process = subprocess.Popen(['java', '-Xms6G', '-Xmx6G', '-jar', SERVER_JAR_PATH, 'nogui'],
-                               stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    process = subprocess.Popen(
+        ['java', '-Xms6G', '-Xmx6G', '-jar', SERVER_JAR_PATH, 'nogui'],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        cwd=os.path.dirname(SERVER_JAR_PATH)  # Set working directory to the jar file's folder
+    )
 
     while True:
         output = await asyncio.get_event_loop().run_in_executor(None, process.stdout.readline)
@@ -70,22 +91,12 @@ async def listen_to_server():
             # Player login message
             login_match = re.search(r'\[.*INFO]: (.*) joined the game', output)
             if login_match:
-                player_name = login_match.group(1)
-                role = discord.utils.get(client.guilds[0].roles, name=ROLE_NAME)
-                if role:
-                    message_content = f"{player_name} has entered the Grove! <@&{role.id}>"
-                    # Store the message object returned so it can be deleted on logout
-                    message = await send_message(message_content, channel_id=LOGIN_CHANNEL_ID)
-                    logged_in_players[player_name] = message
+                await player_login(login_match)
 
             # Player logout message
             logout_match = re.search(r'\[.*INFO\]: (.*) left the game', output)
             if logout_match:
-                player_name = logout_match.group(1)
-                # Retrieve and delete the login message
-                if player_name in logged_in_players:
-                    await logged_in_players[player_name].delete()
-                    del logged_in_players[player_name]
+                await player_logout(logout_match)
 
             # Player death message
             death_match = re.search(r'\[.*INFO\]: (.*) (was slain by .*|fell from a high place|burned to death|lava|drowned|blew up|hit the ground too hard|was shot by .*|was pricked to death|walked into a cactus|suffocated)', output)
